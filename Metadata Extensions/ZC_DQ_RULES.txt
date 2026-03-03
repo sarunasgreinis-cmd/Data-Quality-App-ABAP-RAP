@@ -1,0 +1,48 @@
+@Metadata.layer: #CORE
+@UI: {
+  headerInfo: {
+    typeName: 'Rule',
+    typeNamePlural: 'Rules',
+    title: { type: #STANDARD, value: 'RuleName' },
+    description: { value: 'SourceTable' }
+  }
+}
+annotate view ZC_DQ_RULES with
+{
+
+  @UI.facet: [
+
+    { id: 'RuleHeader', type: #COLLECTION, label: 'Rule Information', position: 10 },
+    
+
+    { id: 'FieldGroup1', parentId: 'RuleHeader', type: #IDENTIFICATION_REFERENCE, label: 'General Details', position: 10 },
+    
+  
+    { id: 'ResultsLine', type: #LINEITEM_REFERENCE, label: 'Detected Errors', position: 20, targetElement: '_Results' }
+  ]
+
+  
+  @UI.lineItem: [
+    { position: 10 },
+    { type: #FOR_ACTION, dataAction: 'ExecuteRule', label: 'Run Rule' } 
+  ]
+  @UI.selectionField: [{ position: 10 }] 
+  @UI.identification: [{ position: 10 }] 
+  RuleId;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  RuleName;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  SourceTable;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  SourceField;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  RuleType;
+}
