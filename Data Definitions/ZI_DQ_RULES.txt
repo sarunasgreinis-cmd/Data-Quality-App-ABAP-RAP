@@ -1,0 +1,18 @@
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Data Quality Rules Root'
+
+define root view entity ZI_DQ_RULES
+  as select from ztdq_meta
+
+  composition [0..*] of ZI_DQ_RESULTS as _Results 
+
+{
+  key rule_id       as RuleId,
+  rule_name         as RuleName,
+  source_table      as SourceTable,
+  source_field      as SourceField,
+  rule_type         as RuleType,
+  
+
+  _Results
+}
