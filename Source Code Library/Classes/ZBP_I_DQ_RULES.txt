@@ -1,0 +1,75 @@
+CLASS zbp_i_dq_rules DEFINITION PUBLIC ABSTRACT FINAL FOR BEHAVIOR OF zi_dq_rules.
+ENDCLASS.
+
+CLASS zbp_i_dq_rules IMPLEMENTATION.
+ENDCLASS.
+
+CLASS lhc_Rule DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+
+    " --- THIS IS THE MISSING METHOD THAT CAUSED THE CRASH ---
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR Rule RESULT result.
+
+    METHODS get_instance_features FOR INSTANCE FEATURES
+      IMPORTING keys REQUEST requested_features FOR Rule RESULT result.
+
+    METHODS ExecuteRule FOR MODIFY
+      IMPORTING keys FOR ACTION Rule~ExecuteRule RESULT result.
+
+ENDCLASS.
+
+CLASS lhc_Rule IMPLEMENTATION.
+
+
+  METHOD get_global_authorizations.
+
+
+    IF requested_authorizations-%create EQ if_abap_behv=>mk-on.
+      result-%create = if_abap_behv=>auth-allowed.
+    ENDIF.
+
+    IF requested_authorizations-%update EQ if_abap_behv=>mk-on.
+      result-%update = if_abap_behv=>auth-allowed.
+    ENDIF.
+
+    IF requested_authorizations-%delete EQ if_abap_behv=>mk-on.
+      result-%delete = if_abap_behv=>auth-allowed.
+    ENDIF.
+
+    IF requested_authorizations-%action-ExecuteRule EQ if_abap_behv=>mk-on.
+        result-%action-ExecuteRule = if_abap_behv=>auth-allowed.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_instance_features.
+
+    READ ENTITIES OF ZI_DQ_RULES IN LOCAL MODE
+      ENTITY Rule
+      ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(rules).
+
+    result = VALUE #( FOR rule IN rules
+                      ( %tky = rule-%tky
+                        %action-ExecuteRule = if_abap_behv=>fc-o-enabled ) ).
+  ENDMETHOD.
+
+
+  METHOD ExecuteRule.
+    LOOP AT keys INTO DATA(ls_key).
+
+      zcl_dq_engine=>execute_rule( iv_rule_id = ls_key-RuleId ).
+    ENDLOOP.
+
+
+    READ ENTITIES OF ZI_DQ_RULES IN LOCAL MODE
+      ENTITY Rule
+      ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rules).
+
+    result = VALUE #( FOR rule IN lt_rules
+                      ( %tky = rule-%tky %param = rule ) ).
+  ENDMETHOD.
+
+ENDCLASS.
