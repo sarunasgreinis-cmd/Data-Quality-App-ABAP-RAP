@@ -1,0 +1,160 @@
+CLASS zcl_dq_engine DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
+
+  PUBLIC SECTION.
+    " This defines the method so the outside world knows it exists
+    CLASS-METHODS execute_rule
+      IMPORTING
+        iv_rule_id TYPE ztdq_meta-rule_id.
+
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+ENDCLASS.
+
+
+
+CLASS zcl_dq_engine IMPLEMENTATION.
+
+  METHOD execute_rule.
+    DATA: ls_rule TYPE ztdq_meta,
+          lv_sql  TYPE string.
+
+
+    SELECT SINGLE * FROM ztdq_meta
+      INTO @ls_rule
+      WHERE rule_id = @iv_rule_id.
+
+    IF sy-subrc <> 0.
+      RETURN. " Rule not found
+    ENDIF.
+
+
+    DELETE FROM ztdq_result WHERE rule_id = @iv_rule_id.
+
+
+    CASE ls_rule-rule_type.
+
+
+      WHEN 'NULL_CHECK'.
+        lv_sql = |INSERT INTO ztdq_result (client, rule_id, object_key, message, run_date, run_time) | &&
+                 |SELECT '{ sy-mandt }', '{ ls_rule-rule_id }', { ls_rule-source_field }, | &&
+                 |'Null Value Found', '{ sy-datum }', '{ sy-uzeit }' | &&
+                 |FROM { ls_rule-source_table } | &&
+                 |WHERE { ls_rule-source_field } IS INITIAL|.
+
+      WHEN 'DUPLICATE_CHECK'.
+        lv_sql = |INSERT INTO ztdq_result (client, rule_id, object_key, message, run_date, run_time) | &&
+                 |SELECT '{ sy-mandt }', '{ ls_rule-rule_id }', { ls_rule-source_field }, | &&
+                 |'Duplicate Value Found', '{ sy-datum }', '{ sy-uzeit }' | &&
+                 |FROM { ls_rule-source_table } | &&
+                 |GROUP BY { ls_rule-source_field } | &&
+                 |HAVING COUNT(*) > 1|.
+
+
+      " Ruleset start here
+WHEN 'COSTING_CHECK'.
+
+        SELECT DISTINCT
+               marc~matnr,
+               marc~werks,
+               makt~maktx,
+               marc~ncost
+          FROM marc
+          JOIN mara ON marc~matnr = mara~matnr
+          LEFT JOIN makt ON mara~matnr = makt~matnr AND makt~spras = 'E'
+          WHERE mara~lvorm = ''
+            AND marc~lvorm = ''
+            AND marc~mmsta BETWEEN '25' AND '55'
+            AND mara~mtart IN ('FERT', 'HALB')
+            AND marc~beskz = 'E'
+            AND marc~sobsl = '50'
+          INTO TABLE @DATA(lt_data).
+
+        IF lt_data IS NOT INITIAL.
+           DATA: lt_db_results TYPE TABLE OF ztdq_result.
+
+           LOOP AT lt_data INTO DATA(ls_row).
+
+
+             " If NCOST is empty (''), it is '0'. Otherwise, it is '1'.
+             DATA(lv_validation_result) = COND string( WHEN ls_row-ncost = '' THEN '0'
+                                                       ELSE '1' ).
+
+             APPEND VALUE #(
+               client     = sy-mandt
+               rule_id    = ls_rule-rule_id
+               object_key = |{ ls_row-matnr }-{ ls_row-werks }|
+
+               " 3. Put the 0 or 1 directly in the message field
+               message    = lv_validation_result
+
+               run_date   = sy-datum
+               run_time   = sy-uzeit
+             ) TO lt_db_results.
+           ENDLOOP.
+
+           INSERT ztdq_result FROM TABLE @lt_db_results.
+        ENDIF.
+
+        WHEN 'EAN_CHECK'.
+
+        TYPES: BEGIN OF ty_ean_error,
+                 ean11      TYPE mara-ean11,
+                 mat_count  TYPE i,
+                 mat_list   TYPE string,
+               END OF ty_ean_error.
+        DATA: lt_ean_errors TYPE TABLE OF ty_ean_error.
+
+
+        SELECT mara~ean11,
+               count( DISTINCT mara~matnr ) AS mat_count,
+               string_agg( mara~matnr, ' ; ' ) AS mat_list
+          FROM mara
+          LEFT JOIN makt ON mara~matnr = makt~matnr AND makt~spras = 'E'
+          WHERE mara~lvorm = ''
+            AND makt~maktx NOT LIKE '%#USE%'
+            AND makt~maktx NOT LIKE '%# USE%'
+            AND makt~maktx NOT LIKE '%NOT USE%'
+            AND makt~maktx NOT LIKE '%NOTUSE%'
+            AND makt~maktx NOT LIKE '%TEMPLATE%'
+            AND makt~maktx NOT LIKE '%NOT IN USE%'
+            AND mara~mtart IN ('FERT','HAWA')
+            AND mara~mstae < '90'
+            AND mara~ean11 <> ''
+          GROUP BY mara~ean11
+          HAVING count( DISTINCT mara~matnr ) > 1  " Only take EANs assigned to multiple mats
+          INTO TABLE @lt_ean_errors.
+
+        " Save findings to the results table
+        IF lt_ean_errors IS NOT INITIAL.
+          DATA: lt_res_db TYPE TABLE OF ztdq_result.
+          LOOP AT lt_ean_errors INTO DATA(ls_ean).
+            APPEND VALUE #(
+              client     = sy-mandt
+              rule_id    = ls_rule-rule_id
+              object_key = |EAN: { ls_ean-ean11 }|
+              message    = |Shared by { ls_ean-mat_count } mats: { ls_ean-mat_list }|
+              run_date   = sy-datum
+              run_time   = sy-uzeit
+            ) TO lt_res_db.
+          ENDLOOP.
+          INSERT ztdq_result FROM TABLE @lt_res_db.
+        ENDIF.
+
+    ENDCASE.
+
+
+    IF lv_sql IS NOT INITIAL.
+      TRY.
+          EXEC SQL.
+            EXECUTE IMMEDIATE :lv_sql
+          ENDEXEC.
+        CATCH cx_sy_native_sql_error.
+          " Log error if needed
+      ENDTRY.
+    ENDIF.
+
+  ENDMETHOD.
+ENDCLASS.
