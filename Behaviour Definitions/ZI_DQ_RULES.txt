@@ -1,0 +1,50 @@
+managed implementation in class zbp_i_dq_rules unique;
+strict;
+
+define behavior for ZI_DQ_RULES alias Rule
+persistent table ztdq_meta
+lock master
+authorization master ( global )
+{
+  create;
+  update;
+  delete;
+
+  field ( mandatory : create, readonly : update ) RuleId;
+
+  mapping for ztdq_meta
+  {
+    RuleId = rule_id;
+    RuleName = rule_name;
+    SourceTable = source_table;
+    SourceField = source_field;
+    RuleType = rule_type;
+  }
+
+  action ( features : instance ) ExecuteRule result [1] $self;
+
+  association _Results { create; }
+}
+
+define behavior for ZI_DQ_RESULTS alias Result
+persistent table ztdq_result
+lock dependent by _Rule
+authorization dependent by _Rule
+{
+  update;
+  delete;
+
+  field ( readonly ) RuleId;
+  field ( readonly : update ) ObjectKey;
+
+  mapping for ztdq_result
+  {
+    RuleId = rule_id;
+    ObjectKey = object_key;
+    Message = message;
+    RunDate = run_date;
+    RunTime = run_time;
+  }
+
+  association _Rule;
+}
