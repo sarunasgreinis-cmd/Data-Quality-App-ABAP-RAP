@@ -1,0 +1,27 @@
+@EndUserText.label: 'Data Quality Rules - Projection'
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@Metadata.allowExtensions: true
+
+
+@Search.searchable: true
+
+define root view entity ZC_DQ_RULES
+  provider contract transactional_query
+  as projection on ZI_DQ_RULES
+{
+    @Search.defaultSearchElement: true
+    @Search.fuzzinessThreshold: 0.8
+    key RuleId,
+    
+    @Search.defaultSearchElement: true
+    RuleName,
+    
+    @Search.defaultSearchElement: true
+    SourceTable,
+    
+    SourceField,
+    RuleType,
+    
+
+    _Results : redirected to composition child ZC_DQ_RESULTS
+}
