@@ -1,0 +1,19 @@
+@EndUserText.label: 'Data Quality Results - Projection'
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@Metadata.allowExtensions: true 
+
+@Search.searchable: true
+
+define view entity ZC_DQ_RESULTS
+  as projection on ZI_DQ_RESULTS
+{
+    key RuleId,
+    key ObjectKey,
+    
+    @Search.defaultSearchElement: true 
+    Message,
+    
+    RunDate,
+ 
+    _Rule : redirected to parent ZC_DQ_RULES
+}
