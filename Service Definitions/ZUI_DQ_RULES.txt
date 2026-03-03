@@ -1,0 +1,5 @@
+@EndUserText.label: 'Service for Data Quality Rules'
+define service ZUI_DQ_RULES {
+  expose ZC_DQ_RULES   as Rule;
+  expose ZC_DQ_RESULTS as Result;
+}
