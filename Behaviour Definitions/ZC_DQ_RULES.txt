@@ -1,0 +1,21 @@
+projection;
+strict;
+
+define behavior for ZC_DQ_RULES alias Rule
+{
+  use create;
+  use update;
+  use delete;
+
+  use action ExecuteRule;
+
+  use association _Results { create; }
+}
+
+define behavior for ZC_DQ_RESULTS alias Result
+{
+  use update;
+  use delete;
+
+  use association _Rule;
+}
