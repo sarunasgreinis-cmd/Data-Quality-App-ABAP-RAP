@@ -1,0 +1,15 @@
+@EndUserText.label : 'DQ Rule Metadata'
+@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #ALLOWED
+define table ztdq_meta {
+
+  key client   : abap.clnt not null;
+  key rule_id  : abap.char(10) not null;
+  rule_name    : abap.char(40);
+  source_table : abap.char(30);
+  source_field : abap.char(30);
+  rule_type    : abap.char(20);
+
+}
