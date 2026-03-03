@@ -1,0 +1,20 @@
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Data Quality Results Child'
+@Metadata.ignorePropagatedAnnotations: true
+
+define view entity ZI_DQ_RESULTS
+  as select from ztdq_result
+
+  association to parent ZI_DQ_RULES as _Rule on $projection.RuleId = _Rule.RuleId
+{
+  key rule_id       as RuleId,
+  key object_key    as ObjectKey,
+  
+  message           as Message,
+  run_date          as RunDate,
+
+  run_time          as RunTime, 
+  
+
+  _Rule 
+}
