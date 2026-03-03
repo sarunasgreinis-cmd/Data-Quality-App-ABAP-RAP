@@ -1,0 +1,15 @@
+@EndUserText.label : 'DQ Execution Results'
+@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #L
+@AbapCatalog.dataMaintenance : #ALLOWED
+define table ztdq_result {
+
+  key client     : abap.clnt not null;
+  key rule_id    : abap.char(10) not null;
+  key object_key : abap.char(40) not null;
+  message        : abap.char(100);
+  run_date       : abap.dats;
+  run_time       : abap.tims;
+
+}
